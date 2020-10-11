@@ -20,7 +20,6 @@
 </tr>
 </tbody>
 </table>
-<hr />
 <p><span style="color: #008000;"><strong>Body.csv</strong></span></p>
 <table style="height: 5px;" width="653">
 <tbody>
