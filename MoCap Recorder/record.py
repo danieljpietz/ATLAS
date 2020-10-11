@@ -18,13 +18,21 @@ import os
 import datetime
 import threading
 
-if (len(sys.argv) == 2):
-    SESSIONNAME = str(sys.argv[1]) + " - "+ str(datetime.datetime.now())
+if(len(sys.argv) < 3):
+    print("ERROR: Use python record.py MarkerCount BodyCount Optional: Session Name")
+    exit(1)
+    pass
+
+if (len(sys.argv) == 4):
+    SESSIONNAME = str(sys.argv[3]) + " - "+ str(datetime.datetime.now())
 else:
     SESSIONNAME = str(datetime.datetime.now())
     pass
 SESSIONNAME = SESSIONNAME.replace(":", " ")
 SERVER = "172.19.34.203"
+
+MarkerCount = int(sys.argv[1])
+BodyCount = int(sys.argv[2])
 
 shouldStop = False
 frameIsReady = False
@@ -50,6 +58,8 @@ def recordThread():
     global frameIsReady
     global markerWriter
     global bodiesWriter
+    global BodyCount
+    global MarkerCount
     i = 0
     # instantiate context
     o = owl.Context()
@@ -58,17 +68,17 @@ def recordThread():
     # initialize session
     o.initialize("streaming=1")
 
-    MarkerFiles = 9 * [None]
-    MarkerWriters = len(MarkerFiles) * [None]
-    MarkerCount = 9
+    MarkerFiles = MarkerCount * [None]
+    MarkerWriters = MarkerCount * [None]
+    
     for i in range(0, MarkerCount):
         MarkerFiles[i] =  open(os.path.join(SESSIONPATH,"Marker " + str(i)) + ".csv", 'a+', newline='')
         MarkerWriters[i] = csv.writer(MarkerFiles[i], delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         pass
 
-    BodyFiles = 9 * [None]
-    BodyWriters = len(BodyFiles) * [None]
-    BodyCount = 9
+    BodyFiles = BodyCount * [None]
+    BodyWriters = BodyCount * [None]
+    
     for i in range(0, BodyCount):
         BodyFiles[i] =  open(os.path.join(SESSIONPATH,"Body " + str(i)) + ".csv", 'a+', newline='')
         BodyWriters[i] = csv.writer(BodyFiles[i], delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
