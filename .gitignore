@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# OS Directory Files
+*.DS_Store
+_MACOSX
