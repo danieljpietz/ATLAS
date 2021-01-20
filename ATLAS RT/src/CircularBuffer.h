@@ -29,12 +29,7 @@ private:
     size_t _bufferIndex;        // Current index of buffer
 #ifndef ATLAS_BUFFER_DISABLE_THREADSAFE
 // Supress C++-98 compatibility warning
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc++98-compat"
-#pragma GCC diagnostic ignored "-Wc++11-extensions"
     pthread_mutex_t _mutex = PTHREAD_MUTEX_INITIALIZER;
-#pragma GCC pop
-#pragma GCC pop
 #endif
 public:
 
