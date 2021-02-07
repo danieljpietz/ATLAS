@@ -1,19 +1,16 @@
 #include <iostream>
-#include <Eigen/Dense>
 #include "arduino-serial-lib.h"
 #include "Sensor.h"
-
 #include <chrono>
 
 #define now std::chrono::high_resolution_clock::now()
 
-using namespace Eigen;
-using namespace std;
- 
-typedef Matrix<double, 8, 8> Matrix8d;
-typedef Matrix<double, 8,1> Vector8d;
 
 int main()  {
+
+    // Saturation and Timig Testing. Current average response time
+    // To Encoder request is 48.7498 microseconds
+    // done over 1M requests
 
     EncoderTrinket encoderTrinket("/dev/ttyACM0");
     auto t1 = now;
