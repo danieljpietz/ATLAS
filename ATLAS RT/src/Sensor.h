@@ -4,11 +4,19 @@
 #include <array>
 #include <iostream>
 #include <unistd.h>
+#include <chrono>
 
 #define buf_max 256
-#define baudrate 4000000
+#define baudrate 2000000
 #define timeout 1000
 #define eolchar '\n'
+
+std::chrono::_V2::system_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+
+template <typename timeType>
+    long getTime() {
+        return std::chrono::duration_cast<timeType>(std::chrono::high_resolution_clock::now() - startTime).count();
+    }
 
 class Trinket {
     const char* address;
@@ -34,7 +42,9 @@ serialWrite:
             usleep(500);       // Resource was busy, wait 1ms and try again
             goto serialWrite;
         }
+        char discard[1];
         serialport_read_until(fd,  result,  eolchar,  buf_max,  timeout);
+        serialport_read_until(fd,  discard,  eolchar,  buf_max,  timeout);
     }
 
 };
@@ -60,19 +70,23 @@ public:
         
     }
 
-    short getMotor1Value() {
-        char buf[6];
+    int getMotor1Value() {
+        char buf[12];
+        sendRequest("0", buf);
+        int ret = atoi(buf);
+        if (ret > 4290000000) {
+            ret -= 4294967295;
+        }
+        return -ret;
+    }
+
+    int getMotor2Value() {
+        char buf[12];
         sendRequest("1", buf);
-        return static_cast<short>(atoi(buf));
+        return static_cast<int>(atoi(buf));
     }
 
-    short getMotor2Value() {
-        char buf[6];
-        sendRequest("2", buf);
-        return static_cast<short>(atoi(buf));
-    }
-
-    std::array<short, 2> getMotorValues() {
+    std::array<int, 2> getMotorValues() {
         return {getMotor1Value(), getMotor2Value()};
     }
 

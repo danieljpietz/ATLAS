@@ -1,29 +1,32 @@
-#include <iostream>
-#include <Eigen/Dense>
-#include "arduino-serial-lib.h"
-#include "Sensor.h"
-
+#include <JetsonGPIO.h>
+#include "Motor.h"
+#include <unistd.h>
+#include <math.h>
 #include <chrono>
+int main(){
 
-#define now std::chrono::high_resolution_clock::now()
+	// Pin Setup. 
+	// Board pin-numbering scheme
+	GPIO::setmode(GPIO::BOARD);
 
-using namespace Eigen;
-using namespace std;
- 
-typedef Matrix<double, 8, 8> Matrix8d;
-typedef Matrix<double, 8,1> Vector8d;
+	auto t1 = std::chrono::high_resolution_clock::now();
+	auto t2 = std::chrono::high_resolution_clock::now();
+	auto t3 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
-int main()  {
-
-    EncoderTrinket encoderTrinket("/dev/ttyACM0");
-    auto t1 = now;
-    for(int i = 0; i < 100000; ++i) {
-        encoderTrinket.getMotor1Value();
-    }
-    auto t2 = now;
-    auto t3 = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-    std::cout << float(t3)/100000 << std::endl;
-
-
-    return 1;
+	Motor legMotor(1, 33, 18);
+	legMotor.reset();
+	
+	double P = 0.1;
+	double D = 0.05;
+	
+	while(t3 < 1000*100) {
+		t2 = std::chrono::high_resolution_clock::now();
+		t3 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+		legMotor.set(-sin(static_cast<double>(t3)/1000.0));
+		//legMotor.set(P * (180 - legMotor.get()) - D * legMotor.getSpeedAveraged());
+		std::cout <<  legMotor.voltage() << " , " << legMotor.get() << std::endl;
+		usleep(5000);
+	}
+	legMotor.set(0);
+	return 0;
 }
