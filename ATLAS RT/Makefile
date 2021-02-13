@@ -1,6 +1,6 @@
 
 CFILES = src
-CFLAGS = -Wall -O3 -lpthread -lrt -lJetsonGPIO 
+CFLAGS = -g -Wall -O3 -lpthread -lrt -lJetsonGPIO 
 BIN = bin
 
 all:

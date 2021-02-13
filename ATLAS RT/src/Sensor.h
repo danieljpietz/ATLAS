@@ -58,16 +58,18 @@ public:
     }
 
     void resetMotorCounts() {
-        char result[6];
+        char result[8];
         sendRequest("?", result);
-        if (strcmp(result, "RESET\n")) {
-            std::cout << "ERROR RESETTING MOTOR COUNT:" << result << std::endl;
+        std::cout << "RESET MESSAGE: " << std::string(result);
+        #if 0
+        if (std::string(result) !=  "RESET\n") {
+            std::cout << "ERROR RESETTING MOTOR COUNT: " << result;
         }
         
         else {
             std::cout << "Reset Succesful" << std::endl;
         }
-        
+        #endif
     }
 
     int getMotor1Value() {
@@ -77,7 +79,7 @@ public:
         if (ret > 4290000000) {
             ret -= 4294967295;
         }
-        return -ret;
+        return ret;
     }
 
     int getMotor2Value() {
