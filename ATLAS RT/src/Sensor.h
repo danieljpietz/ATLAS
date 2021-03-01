@@ -7,7 +7,7 @@
 #include <chrono>
 
 #define buf_max 256
-#define baudrate 9600
+#define baudrate 2000000
 #define timeout 1000
 #define eolchar '\n'
 
@@ -30,7 +30,14 @@ protected:
     
     Trinket(const char* address) {
         this->address = address;
-        this->fd = serialport_init(address, baudrate);
+        try {
+            this->fd = serialport_init(address, baudrate);
+        }
+        catch (int x) {
+            std::cout << "something went REALLY wrong... maybe the trinket isnt plugged in?" << std::endl;
+            exit(9);
+        }
+        this->reset();
     }
     
     void sendRequest(const char* request, char* result) {
@@ -49,9 +56,11 @@ protected:
 public:
     void reset() {
         std::cout << this->address << ": Resetting Device" << std::endl;
+        #if 0
         char result[8];
         this->sendRequest("&", result);
         close(this->fd);
+        auto adrOLD = "/dev/ttyACM1";
     openAgain:
         try {
             this->fd = serialport_init(this->address, baudrate);
@@ -60,6 +69,7 @@ public:
             usleep(500);
             goto openAgain;
         }
+        #endif
         std::cout << this->address << ": Reset done" << std::endl;
     }
     

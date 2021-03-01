@@ -49,7 +49,7 @@ protected:
 public:
     void reset() {
         std::cout << this->address << ": Resetting Device" << std::endl;
-        char result[8];
+        char result[buf_max];
         this->sendRequest("&", result);
         close(this->fd);
     openAgain:
@@ -102,7 +102,7 @@ public:
     }
     
     void resetMotorCounts() {
-        char result[8];
+        char result[buf_max];
         sendRequest("?", result);
         std::cout << "RESET MESSAGE: " << std::string(result);
 #if 0
@@ -117,7 +117,7 @@ public:
     }
     
     int getMotor1Value() {
-        char buf[12];
+        char buf[buf_max];
         sendRequest("0", buf);
         int ret = atoi(buf);
         if (ret > 1290000000) {
@@ -127,7 +127,7 @@ public:
     }
     
     int getMotor2Value() {
-        char buf[12];
+        char buf[buf_max];
         sendRequest("1", buf);
         return static_cast<int>(atoi(buf));
     }

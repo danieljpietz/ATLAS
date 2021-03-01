@@ -15,12 +15,17 @@ void signalHandler(int s)  {
 	exit(0);
 }
 
+void shutdownHandler(int s) {
+	std::cout << "Shutdown detected" << std::endl;
+}
+
 int main(){
 
 	// Pin Setup. 
 	// Board pin-numbering scheme
 	
 	signal(SIGINT, signalHandler);
+	signal(SIGKILL, shutdownHandler);
 
 	GPIO::setmode(GPIO::BOARD);
 	Motor legMotor(1, 33, 18);
@@ -29,12 +34,12 @@ int main(){
 	loggerP = &logger;
 
 	legMotor.reset();
-	legMotor.setTarget(1080);
-	legMotor.setControlActive();
+	legMotor.resetTrinket();
+
+	std::cout << "H" << std::endl;
 
 	while(true) {
-		std::cout << legMotor.getSpeedAveraged() << std::endl;
-		usleep(10000);
+		legMotor.set(1);
 	}
 
 	legMotor.join();

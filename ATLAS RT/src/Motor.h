@@ -11,6 +11,7 @@
 #define clicksPerRevolution 5264
 
 EncoderTrinket encoderTrinket("/dev/ttyACM0");
+//EMGTrinket emgTrinket("/dev/ttyACM1");
 
 class Motor {
     unsigned short port1;
@@ -37,6 +38,7 @@ class Motor {
     double D = 00;
     
     double PID(double target) {
+        std::cout << "Target: " << this->get() << " P: " << this->P*(target - this->get()) << " I: " << I*this->error() << std::endl;
         return this->P*(target - this->get()) + I*this->error();
     }
 
@@ -126,6 +128,8 @@ public:
             this->_error = 1;
         } else if(errorTemp < -1) {
             this->_error = -1;
+        } else if (abs(errorTemp) < 0.001) {
+            this->_error = 0;
         }
         this->history.insert(val);
         this->timeStamps.insert(getTime<std::chrono::microseconds>());
@@ -153,6 +157,10 @@ public:
 
     void reset() {
         encoderTrinket.resetMotorCounts();
+    }
+
+    void resetTrinket() {
+        encoderTrinket.reset();
     }
 
 };

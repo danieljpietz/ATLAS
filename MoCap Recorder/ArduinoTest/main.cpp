@@ -56,7 +56,7 @@
 #include <sys/types.h>
 #include <time.h>
 
-#define BUFFER_SIZE 100000
+#define BUFFER_SIZE 1000000
 
 void fileQueue(void);
 void pythonLaunchThread(void);
@@ -77,7 +77,7 @@ std::thread fileThread;
 std::thread pythonThread;
 
 void fileQueue() {
-    
+
     time_t _tm =time(NULL );
     struct tm * curtime = localtime ( &_tm );
     direc = "Results/" + std::string(asctime(curtime));
@@ -100,7 +100,6 @@ void fileQueue() {
             emg1Queue.pop();
             emg2Queue.pop();
             emg3Queue.pop();
-            
         }
     }
     
@@ -109,7 +108,7 @@ void fileQueue() {
 void pythonLaunchThread() {
     const long vIn = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     std::string call("python3 pythonFile.py ");
-    system((call + std::to_string(vIn) + " '" + file + "'").c_str());
+    system((call + std::to_string(vIn) + " '" + direc + "'").c_str());
     isDone = true;
 }
 
@@ -119,18 +118,19 @@ int main(int argc, char *argv[]) {
     std::cout << "Bootup" << std::endl;
     
     fileThread = std::thread(fileQueue);
-    
-    EMGTrinket trinket("/dev/cu.usbmodem14101");
+    #if 0
+    EMGTrinket trinket("/dev/ttyACM0");
     trinket.reset();
     
     while (!fileThreadSetupDone) {
         usleep(1);
     }
-    
+    #endif
     pythonThread = std::thread(pythonLaunchThread);
     
     auto t1 = std::chrono::high_resolution_clock::now();
     long currentTime = 0;
+    #if 0
     while (!isDone) {
         currentTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - t1).count();
         timeQueue.push(currentTime);
@@ -138,8 +138,8 @@ int main(int argc, char *argv[]) {
         emg1Queue.push(trinket.getEMG(1));
         emg2Queue.push(trinket.getEMG(2));
         emg3Queue.push(trinket.getEMG(3));
-
     }
+    #endif
     pythonThread.join();
     fileThread.join();
     return 1;

@@ -1,25 +1,124 @@
+# Copyright (c) 2020 Daniel Pietz
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import owl
+import csv
 import sys
+import os
+import datetime
+import threading
 import time as tm
-import threading as threading
+
+SERVER = "172.19.34.203"
+
+
+BodyCount = 4
+
+
+def recordThread():
+    global shouldStop
+    global frameIsReady
+    global markerWriter
+    global bodiesWriter
+    global BodyCount
+    global MarkerCount
+    i = 0
+    # instantiate context
+    o = owl.Context()
+    # connect to server with timeout of 10000000 microseconds
+    o.open(SERVER, "timeout=10000000")
+    # initialize session
+    o.initialize("streaming=1")
+
+
+    BodyFiles = BodyCount * [None]
+    BodyWriters = BodyCount * [None]
+    
+    for i in range(0, BodyCount):
+        #BodyFiles[i] =  open(os.path.join(SESSIONPATH,"Body " + str(i)) + ".csv", 'a+', newline='')
+        #BodyWriters[i] = csv.writer(BodyFiles[i], delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        pass
+    
+
+    # main loop
+    evt = None
+    while (evt or (o.isOpen() and o.property("initialized"))) and (shouldStop == False):
+        #while (frameIsReady == True):
+            #pass
+        # poll for events with a timeout (microseconds)
+        evt = o.nextEvent(1000000)
+        # nothing received, keep waiting
+        if not evt: continue
+        # process event
+        if evt.type_id == owl.Type.FRAME:
+            # print rigids
+            if "rigids" in evt:
+                for r in evt.rigids:
+                    BodyEventArr = [getTime(), r.pose]
+                    for P in r.pose:
+                        BodyEventArr.append(P)
+                        pass
+                    print(BodyEventArr)
+                    #BodyWriters[r.id].writerow(BodyEventArr)
+                    pass
+        elif evt.type_id == owl.Type.ERROR:
+            # handle errors
+            print(evt.name, evt.data)
+            if evt.name == "fatal":
+                break
+        elif evt.name == "done":
+            # done event is sent when master connection stops session
+            print("done")
+            break
+        #frameIsReady = True
+    # end main loop
+
+    # end session
+    o.done()
+    # close socket
+    o.close()
+    pass
 
 def getTime():
     return tm.time() * 1000000 - startTime
     
 def userInputThread():
+    global shouldStop
     while(True):
         inputStr = input()
         if inputStr == "stop":
             print("STOPPING")
+            shouldStop = True
             break
     
 def main():
-
+    global shouldStop
+    global file
+    shouldStop = False
     pThread = threading.Thread(target = userInputThread)
+    RecordThread = threading.Thread(target = recordThread)
 
     pThread.start()
-
+    RecordThread.start()
     print("Python Ready")
-    
+    print(file)
     pThread.join()
     
 
@@ -27,4 +126,5 @@ if __name__ == "__main__":
    global startTime, file
    startTime = int(sys.argv[1:][0])
    file = sys.argv[1:][1]
+   SESSIONPATH = os.path.join(file, "MoCap.csv")
    main()

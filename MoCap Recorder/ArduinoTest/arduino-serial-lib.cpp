@@ -30,7 +30,7 @@ int serialport_init(const char* serialport, int baud)
     fd = open(serialport, O_RDWR | O_NONBLOCK );
     
     if (fd == -1)  {
-       //perror("serialport_init: Unable to open port ");
+       perror("serialport_init: Unable to open port ");
         throw 0;
         return -1;
     }
