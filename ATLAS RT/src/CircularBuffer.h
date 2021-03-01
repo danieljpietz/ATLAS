@@ -28,7 +28,6 @@ private:
     T _vec[S];                  // Vector containing buffer values
     size_t _bufferIndex;        // Current index of buffer
 #ifndef ATLAS_BUFFER_DISABLE_THREADSAFE
-// Supress C++-98 compatibility warning
     pthread_mutex_t _mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 public:
@@ -42,8 +41,12 @@ public:
         this->_bufferIndex = -1;
     }
 
+     size_t index()  {
+        return this->_bufferIndex;
+    }
+
     /**
-     * Sze of buffer
+     * Size of buffer
      * @return size
      */
 
@@ -104,6 +107,18 @@ public:
 
     pthread_mutex_t* mutex() {
         return &this->_mutex;
+    }
+
+    /** 
+     * Returns average value of buffer
+     */
+    T mean() {
+        T sum = 0;
+        size_t i;
+        for (i = 0; i < S; ++i) {
+            sum += this->at(i);
+        }
+        return sum/S;
     }
 
 };
