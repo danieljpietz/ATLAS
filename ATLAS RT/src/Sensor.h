@@ -56,9 +56,9 @@ protected:
 public:
     void reset() {
         std::cout << this->address << ": Resetting Device" << std::endl;
-        #if 0
         char result[8];
         this->sendRequest("&", result);
+        #if 0
         close(this->fd);
         auto adrOLD = "/dev/ttyACM1";
     openAgain:
@@ -105,10 +105,15 @@ public:
 };
 
 class EncoderTrinket : public Trinket {
+    short directionBit = 1;
 public:
     
     EncoderTrinket(const char* address) : Trinket(address) {
         
+    }
+
+    void flipDirectionBit() {
+        this->directionBit *= -1;
     }
     
     void resetMotorCounts() {
@@ -129,17 +134,13 @@ public:
     int getMotor1Value() {
         char buf[12];
         sendRequest("0", buf);
-        int ret = atoi(buf);
-        if (ret > 1290000000) {
-            ret -= 4294967295;
-        }
-        return ret;
+        return atoi(buf) - 16777216;
     }
     
     int getMotor2Value() {
         char buf[12];
         sendRequest("1", buf);
-        return static_cast<int>(atoi(buf));
+        return atoi(buf) - 16777216;
     }
     
     std::array<int, 2> getMotorValues() {

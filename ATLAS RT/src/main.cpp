@@ -9,9 +9,9 @@
 Motor* legMotorP;
 Logger* loggerP;
 void signalHandler(int s)  {
-	legMotorP->kill();
-	loggerP->setInActive();
-	loggerP->join();
+	//legMotorP->kill();
+	//loggerP->setInActive();
+	//loggerP->join();
 	exit(0);
 }
 
@@ -28,20 +28,34 @@ int main(){
 	signal(SIGKILL, shutdownHandler);
 
 	GPIO::setmode(GPIO::BOARD);
-	Motor legMotor(1, 33, 18);
+	Motor legMotor(1, 33, 18, 11, 13);
 	legMotorP = &legMotor;
-	Logger logger(&legMotor);
-	loggerP = &logger;
+	//Logger logger(&legMotor);
+	//loggerP = &logger;
 
 	legMotor.reset();
-	legMotor.resetTrinket();
+	//legMotor.resetTrinket();
 
+	legMotor.setTarget(360);
+	legMotor.setControlActive();
+	
+
+#if 0
 	std::cout << "H" << std::endl;
 
-	while(true) {
-		legMotor.set(1);
-	}
+	double x;
 
+	std::cin >> x;
+
+	legMotor.setTarget(-15);
+	legMotor.setControlActive();
+#if 0
+	while(true) {
+		legMotor.setTarget(-legMotor.target());
+		usleep(2000000);
+	}
+#endif
+#endif
 	legMotor.join();
 	return 0;
 }
