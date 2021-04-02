@@ -1,3 +1,5 @@
+#ifndef Sensor__h
+#define Sensor__h
 #include "arduino-serial-lib.h"
 #include <string.h>
 #include <stdlib.h>
@@ -5,13 +7,12 @@
 #include <iostream>
 #include <unistd.h>
 #include <chrono>
-
 #define buf_max 256
 #define baudrate 2000000
 #define timeout 1000
 #define eolchar '\n'
 
-auto startTime = std::chrono::high_resolution_clock::now();
+static auto startTime = std::chrono::high_resolution_clock::now();
 
 template <typename timeType>
 long getTime() {
@@ -30,14 +31,9 @@ protected:
     
     Trinket(const char* address) {
         this->address = address;
-        try {
-            this->fd = serialport_init(address, baudrate);
-        }
-        catch (int x) {
-            std::cout << "something went REALLY wrong... maybe the trinket isnt plugged in?" << std::endl;
-            exit(9);
-        }
+        this->tryOpen();
         this->reset();
+        
     }
     
     void sendRequest(const char* request, char* result) {
@@ -53,26 +49,44 @@ protected:
         serialport_read_until(fd,  result,  eolchar,  buf_max,  timeout);
         serialport_read_until(fd,  discard,  eolchar,  buf_max,  timeout);
     }
+    void tryOpen() {
+        int attempts = 0;
+    openAgain:
+    std::cout << "Trinket Attempt " << attempts << std::endl;
+    if (attempts++ >= 50)
+    {
+        std::cout << "something went REALLY wrong... maybe the trinket isnt plugged in?" << std::endl;
+        exit(9);
+    }
+    FILE *fp = popen("ls /dev/ttyACM*", "r");
+        char buf[13];
+        auto rc = fgets(buf, 13, fp);
+        if (rc) {
+
+        }
+        this->address = buf;
+        std::cout << this->address << std::endl;
+        
+        try {
+            this->fd = serialport_init(this->address, baudrate);
+            fclose(fp);
+        }
+        catch (int x){
+            usleep(500);
+            fclose(fp);
+            goto openAgain;
+        }
+        
+    }
 public:
     void reset() {
         std::cout << this->address << ": Resetting Device" << std::endl;
         char result[8];
         this->sendRequest("&", result);
-        #if 0
         close(this->fd);
-        auto adrOLD = "/dev/ttyACM1";
-    openAgain:
-        try {
-            this->fd = serialport_init(this->address, baudrate);
-        }
-        catch (int x){
-            usleep(500);
-            goto openAgain;
-        }
-        #endif
+        this->tryOpen();
         std::cout << this->address << ": Reset done" << std::endl;
     }
-    
 };
 
 class EMGTrinket : public Trinket {
@@ -105,15 +119,21 @@ public:
 };
 
 class EncoderTrinket : public Trinket {
-    short directionBit = 1;
+    short directionBit1 = 1;
+    short directionBit2 = 1;
 public:
     
     EncoderTrinket(const char* address) : Trinket(address) {
         
     }
 
-    void flipDirectionBit() {
-        this->directionBit *= -1;
+    void flipDirectionBit(unsigned int index) {
+        if(index == 1) {
+            this->directionBit1 *= -1;
+        }
+        else {
+            this->directionBit2 *= -1;
+        }
     }
     
     void resetMotorCounts() {
@@ -134,16 +154,18 @@ public:
     int getMotor1Value() {
         char buf[12];
         sendRequest("0", buf);
-        return atoi(buf) - 16777216;
+        return this->directionBit1*(atoi(buf) - 16777216);
     }
     
     int getMotor2Value() {
         char buf[12];
         sendRequest("1", buf);
-        return atoi(buf) - 16777216;
+        return this->directionBit2 * (atoi(buf) - 16777216);
     }
     
     std::array<int, 2> getMotorValues() {
         return {getMotor1Value(), getMotor2Value()};
     }
 };
+
+#endif

@@ -7,10 +7,11 @@
 #include <thread>
 #include <functional>
 #include <mutex>
-#define motorGPIOFreq 64*128
+#include <linux/gpio.h>
+#define motorGPIOFreq 64*128*4
 #define clicksPerRevolution 5264
 
-EncoderTrinket encoderTrinket("/dev/ttyACM0");
+static EncoderTrinket encoderTrinket("/dev/ttyACM0");
 //EMGTrinket emgTrinket("/dev/ttyACM1");
 
 class Motor {
@@ -24,9 +25,13 @@ class Motor {
     ATLAS::CircularBuffer<100, double> history;
     GPIO::PWM* p;
     double _voltage = 0;
+    double _signedVoltage = 0;
     double _target = 0;
     double _error = 0;
     std::thread controlThread;
+
+    bool highSwitch = false;
+    bool lowSwitch = false;
 
     std::function<double(double target)> controlLaw;
 
@@ -36,11 +41,11 @@ class Motor {
     std::mutex mainPauseMutex;
     bool shouldLockPause = false;
     bool mainThreadPaused = false;
-
+    bool alive = true;
     double targetHitThreshold = 0.5;
 
     double P = 0.1;
-    double I = 0.05;
+    double I = 0.00;
     double D = 0.025;
     
     double PID(double target) {
@@ -60,8 +65,56 @@ class Motor {
         }
     }
 
+    
 
 public:
+
+    void encoderCalibrate() {
+        std::cout << "Calibration Sequence starting for motor " << this->index << std::endl;
+        this->reset();
+        if(this->lowSwitch) {
+            while(!this->highSwitch) {
+                this->set(0.25);
+            }
+        }
+        while (!this->lowSwitch) {
+            this->set(-0.25);
+            //std::cout << "Motor Value: " << this->get() << std::endl;
+            std::cout << this->get() << std::endl;
+            usleep(1);
+        }
+        std::cout << "Switch Hit" << std::endl;
+        this->set(0);
+
+        if (this->get() > 0) {
+            encoderTrinket.flipDirectionBit(this->index);
+            std::cout << "Encoder flipped" << std::endl;
+        }
+        this->reset();
+        std::cout << "Calibration complete" << std::endl;
+    }
+
+    void limitSwitchHandler(bool highSwitch, bool status) {
+        if (highSwitch) {
+            this->highSwitch = status;
+            //std::cout << "High Limit " << status << std::endl; 
+        }
+        else {
+            this->lowSwitch = status;
+            //std::cout << "Low Limit " << status << std::endl;
+        }
+        if (status) {
+            if (highSwitch && this->voltage() > 0) {
+                this->set(0);
+            }
+
+            else if (lowSwitch && this->voltage() < 0) {
+                this->set(0);
+            }  
+
+        }
+
+    }
 
     Motor(const unsigned short index, const unsigned short port1, const unsigned short port2, const unsigned short port3, const unsigned short port4) {
         this->port1 = port1;
@@ -73,44 +126,46 @@ public:
         assert(port1 == 32 || port1 == 33);
         GPIO::setup(port1, GPIO::OUT, GPIO::LOW);
         GPIO::setup(port2, GPIO::OUT, GPIO::LOW);
-        GPIO::setup(port3, GPIO::IN);
-        GPIO::setup(port4, GPIO::IN);
+        
+        std::cout << "Here 1" << std::endl;
 	    this->p = new GPIO::PWM(port1, motorGPIOFreq);
+        std::cout << "Here 2" << std::endl;
         this->mtx.lock();
         this->controlThread = std::thread(&Motor::motorControlThread, this);
         this->shouldKeepAlive = true;
-        //this->encoderCalibrate();
     }
 
-    void encoderCalibrate() {
-        assert(0);
-    }
 
     void set(double scale) {
+        this->_signedVoltage = scale;
+        if ((this->lowSwitch && scale < 0) || (this->highSwitch && scale > 0))
+        {
+            this->p->stop();
+        }
+        
+        else {
+
         int mult = scale > 0 ? 1 : -1;
-        GPIO::output(this->port2, (mult == 1 ? GPIO::LOW : GPIO::HIGH));
+        GPIO::output(this->port2, (mult == 1 ? GPIO::HIGH : GPIO::LOW));
         if (scale > 1) {
             scale = 1;
         } else if (scale < -1) {
             scale = -1;
         }
+        double voltageLast = this->_voltage;
         this->_voltage = mult*scale;
+        
         if (scale == 0) {
             this->p->stop();
         } 
-        else if(GPIO::input(port3) == GPIO::HIGH) {
-            (mult == 0) ? this->p->start(100* this->_voltage) : this->p->stop();
-        }
-        else if(GPIO::input(port4) == GPIO::HIGH) {
-            (mult == 0) ? this->p->start(100* this->_voltage) : this->p->stop();
-        }
-        else {
+        else if (this->_voltage != voltageLast){
             this->p->start(100* this->_voltage);
+        }
         }
     }
     
     double voltage() {
-        return this->_voltage;
+        return this->_signedVoltage;
     }
 
     auto join() {
@@ -130,6 +185,7 @@ public:
     auto kill() {
         this->shouldKeepAlive = false;
         this->useControlLaw = false;
+        this->alive = false;
         this->mtx.unlock();
         return this->join();
     }
@@ -159,6 +215,9 @@ public:
 
     void update() {
         double val = (360.0 * (this->index == 1 ? encoderTrinket.getMotor1Value() : encoderTrinket.getMotor2Value())) / clicksPerRevolution;
+        if(val < -1) {
+            encoderTrinket.flipDirectionBit(this->index);
+        }
         double errorTemp = this->_target - val;
         this->_error += (abs(errorTemp) < 1) ? errorTemp : 0;
         if(errorTemp > 2) {
